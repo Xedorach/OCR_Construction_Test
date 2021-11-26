@@ -9,8 +9,9 @@ import os
 parser = argparse.ArgumentParser(description='convert pdf to images')
 parser.add_argument('-f','--fileName', help="PDF File name", type=str, required=True)
 parser.add_argument('-o','--output', help="Output directory", type=str, required=True)
+parser.add_argument('-t','--threadCount', help="Output directory", type=int, const = 2)
 args = parser.parse_args()
-images = convert_from_path(args.fileName, dpi=300, thread_count = 8)
+images = convert_from_path(args.fileName, dpi=300, thread_count = args.threadCount)
 
 output_dir = os.path.join(os.getcwd(),args.output)
 os.mkdir(output_dir)
