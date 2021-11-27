@@ -1,0 +1,5 @@
+cv2
+pytesseract
+matplotlib
+pdf2image
+image-slicer
