@@ -11,3 +11,13 @@ conda install -c conda-forge tesseract
 **Popper**
 
 conda install -c conda-forge poppler
+
+**CUDA**
+
+Cuda 11.3, find it for your system 
+
+**Pytorch**
+
+conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+
+Dont forget to add the stuff to your path, better documentation will be added as the project grows
