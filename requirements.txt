@@ -3,3 +3,4 @@ pytesseract
 matplotlib
 pdf2image
 image-slicer
+easyocr
