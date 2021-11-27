@@ -32,6 +32,8 @@ for i in range(len(images)):
     # Save pages as images in the pdf
     out_img = (f'page{i}.png')
     images[i].save('page' + str(i) + '.png', 'png')
-    slice(out_img, args.slice)
+
+    if args.slice:
+        slice(out_img, args.slice)
 
 print(f"File {args.fileName} converted, total of {i+1} images created with {args.slice} number of slices")

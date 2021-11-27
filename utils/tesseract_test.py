@@ -3,12 +3,14 @@ import pytesseract
 from matplotlib import pyplot as plt
 import os
 import argparse
+from PIL import Image
 
-parser = argparse.ArgumentParser(description='test image')
-parser.add_argument('image')
+parser = argparse.ArgumentParser(description='read text from images')
+parser.add_argument('-f','--fileName', help="PDF File name", type=str, required=True)
+parser.add_argument('-o','--output', help="filename", type=str, required=True)
 args = parser.parse_args()
 
-image = cv2.imread(args.image)
+image = cv2.imread(args.fileName)
 h, w, c = image.shape
 boxes = pytesseract.image_to_boxes(image)
 for b in boxes.splitlines():
@@ -17,15 +19,15 @@ for b in boxes.splitlines():
 
 b,g,r = cv2.split(image)
 rgb_img = cv2.merge([r,g,b])
-txt = pytesseract.image_to_string(args.image)
+txt = pytesseract.image_to_string(image)
 
-directory = os.path.join(os.getcwd(), "tesseract_output")
-with open(directory+".txt",'w') as f: f.write(str(txt))
+directory = os.path.join(os.getcwd(), args.output)
+with open(filename+".txt",'w') as f: f.write(str(txt))
 
 print("\n --------------- \n Output \n ---------------")
 print(txt)
 
 plt.figure(figsize=(16, 12))
-plt.imshow(rgb_img)
+plt.imshow(image)
 plt.title('PyTesseract test')
 plt.show()
