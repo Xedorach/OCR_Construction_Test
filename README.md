@@ -1,6 +1,6 @@
 # OCR_Construction_Test
 OCR on different construction documents using different models. 
-
+More details will be added later.
 ## Dependencies:
 Dependency installations using conda, figure out how to do it for your platform for now.
 
