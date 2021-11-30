@@ -22,7 +22,7 @@ rgb_img = cv2.merge([r,g,b])
 txt = pytesseract.image_to_string(image)
 
 directory = os.path.join(os.getcwd(), args.output)
-with open(filename+".txt",'w') as f: f.write(str(txt))
+with open(args.filename+".txt",'w') as f: f.write(str(txt))
 
 print("\n --------------- \n Output \n ---------------")
 print(txt)
