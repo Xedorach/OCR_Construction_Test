@@ -6,7 +6,9 @@ from image_slicer import slice
 import easyocr
 from matplotlib import pyplot as plt
 import cv2
-
+from PIL import Image
+import shutil
+import glob
 '''
 Image to PDF conversion Arguments
 Different arguments that can be passed to convert_from_path:
@@ -26,20 +28,20 @@ parser = argparse.ArgumentParser(description='convert pdf to images')
 parser.add_argument('-f','--fileName', help="PDF File name", type=str, required=True)
 parser.add_argument('-o','--output', help="Output directory", type=str, required=True)
 parser.add_argument('-t','--threadCount', help="Output directory",nargs='?', type=int, const = 2)
-parser.add_argument('-s','--slice',help='How many slices for the image',nargs='?', type=int,
-                     const=1)
+parser.add_argument('-s','--slice',help='slice or no', type=bool, nargs='?', const=False) 
+# Removed for now for easier image stitching
+
 args = parser.parse_args()
 
 # Create directories for clean output
 output_dir = os.path.join(os.getcwd(),args.output)
-os.makedirs(output_dir)
-crop_img_path = os.path.join(output_dir,'crop_img')
+img_path = os.path.join(output_dir,'crop_img')
 txt_path = os.path.join(output_dir, 'ocr_txt')
 ocr_img_path = os.path.join(output_dir, 'ocr_img')
 
-os.mkdir(crop_img_path)
+os.makedirs(output_dir)
+os.mkdir(img_path)
 os.mkdir(txt_path)
-os.mkdir(ocr_img_path)
 
 print('Output directories created...')
 #Convert pdf file to 1 big image
@@ -57,7 +59,7 @@ reader = easyocr.Reader(['en','en'])
 
 #Eventually these prints will be done properly with logging..
 
-print(f"Converting file {args.fileName} from pdf to image ... please wait") 
+print(f".\n.\n.\nConverting file {args.fileName} from pdf to image ... please wait") 
 
 
 # Helper function to convert list output from OCR to string to be written to a txt file
@@ -70,43 +72,69 @@ def listToString(s):
 
 
 # Go into output directory to begin work
-os.chdir(output_dir) 
+os.chdir(img_path) 
 
 # Image saving + cropping
 for i in range(len(images)):
     # Save pages as images in the pdf
-    os.chdir(crop_img_path)
+
     out_img = (f'page{i}.png')
     images[i].save('page' + str(i) + '.png', 'png')
-    
+
     if args.slice:
-        slice(out_img, args.slice)
+        slice(out_img, 100) #perhaps dont hard code this 100 is number of slices
+
+    shutil.move(out_img, output_dir)
 
 # lol
-print(f"File {args.fileName} converted, total of {i+1} images created with {args.slice} number of slices...\n.\n.\n.\nApplying OCR... ")
+print(f".\n.\n.\nFile {args.fileName} converted, total of {i+1} image(s) created. Sliced : {args.slice}\n.\n.\n.\nApplying OCR ")
 
 # OCR block
-for filename in os.listdir(crop_img_path):
-    # ensure it is reading images from proper directory
-    os.chdir(crop_img_path)
-    image = cv2.imread(str(filename))
-    result = reader.readtext(image, rotation_info = [0,270]) #reads in 0 and 270 degree orientation of text, possible args: 0, 90, 180, 270. needs testing.
-    filename_no_ext= os.path.splitext(filename)[0] #get filename without extension for later use
-    # go into ocr image directory to write the images with bounding boxes
-    os.chdir(ocr_img_path)
-    for detection in result:
-        box_coords = detection[0]
-        box_1 =  tuple(detection[0][0])
-        box_2 =  tuple(detection[0][2])
-        image = cv2.rectangle(image, ( int(box_1[0]), int(box_1[1]) ), ( int(box_2[0]) , int(box_2[1])), (0,255,0),3)
-        cv2.imwrite(str(filename_no_ext) + '_ocr.png', image)
 
-    ### Uncomment these 2 lines if you want to see output step by step  
-    # plt.imshow(image)
-    # plt.show()
-    text = listToString(result)
-    os.chdir(txt_path)
-    with open(filename_no_ext+".txt",'w') as f: f.write(text)
+for filename in os.listdir(img_path):
+
+    # Ensure that it is reading from the right directory
+
+    os.chdir(img_path)
+    filename_no_ext=os.path.splitext(filename)[0] #get filename without extension for later use
+    image = cv2.imread(filename)
+    result = reader.readtext(image, rotation_info = [0,270])
+    #reads in 0 and 270 degree orientation of text, possible args: 0, 90, 180, 270. needs testing.
+
+    for detection in result:
+
+        os.chdir(img_path)
+        os.remove(filename)
+        box_coords = detection[0]
+        box_1 = tuple(detection[0][0])
+        box_2 = tuple(detection[0][2])
+        image = cv2.rectangle(image, ( int(box_1[0]), int(box_1[1]) ), ( int(box_2[0]) , int(box_2[1])), (0,255,0),3)
+        cv2.imwrite(filename, image)
+        ### Uncomment these 2 lines if you want to see output step by step  
+        # plt.imshow(image)
+        # plt.show()
+        text = listToString(result)
+        os.chdir(txt_path)
+        with open(filename_no_ext+".txt",'w') as f: f.write(text)
+
+print(".\n.\n.\nOCR done, stitching...")
+# Image stitching 
+
+os.chdir(output_dir)
+original_img = Image.open(out_img)
+h, w= original_img.size
+final_img = Image.new("RGB", (h, w))
+name, ext = os.path.splitext(out_img)
+final_img.save(name +'_ocr' + ext)
+os.chdir(img_path)
+for img in os.listdir(img_path):
+    tile = Image.open(img).convert('RGB')
+    h2, w2 = tile.size
+    for i in range(0, h, h2):
+        for j in range(0,w,w2):
+            final_img.paste(tile, (i,j))
+
+final_img.save(name+'_ocr'+ ext)
 
 print("\n.\n.\n.\nOperation complete")
 
