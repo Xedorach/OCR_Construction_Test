@@ -118,19 +118,23 @@ for filename in os.listdir(img_path):
 
 print(".\n.\n.\n.\nStiching...")
 
+
+# Stitching Area. It is very messy right now but will be cleaned up later. 
+
 img_list = os.listdir(img_path)
 os.chdir(img_path)
 test = Image.open(img_list[0])
 images = [Image.open(x) for x in img_list]
 width, height = test.size
-total_width = 15*width
+total_width = 15*width # Get rid of the 15 so it is no hard coded 
 max_height = 15*height
 new_im = Image.new('RGB', (total_width, max_height))
 
+#Initial values for image loop
 x_offset = 0
 y_offset = 0
-
 c = 0
+
 for im in images:
  
     a = img_list[c].split('_')
@@ -144,6 +148,6 @@ for im in images:
     new_im.paste(im, (x_offset,y_offset))
 
 os.chdir(output_dir)
-new_im.save('test.jpg')
+new_im.save('ocr.jpg')
 
 print("\n.\n.\n.\nOperation complete")
