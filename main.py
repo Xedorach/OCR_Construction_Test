@@ -9,10 +9,10 @@ import cv2
 from PIL import Image
 import shutil
 import glob
+import sys
 '''
 Image to PDF conversion Arguments
 Different arguments that can be passed to convert_from_path:
-
 convert_from_path(pdf_path, dpi=200, output_folder=None, first_page=None, last_page=None,
 fmt='ppm', jpegopt=None, thread_count=1, userpw=None, use_cropbox=False, strict=False,
 transparent=False, single_file=False, output_file=str(uuid.uuid4()), poppler_path=None, 
@@ -36,8 +36,7 @@ args = parser.parse_args()
 # Create directories for clean output
 output_dir = os.path.join(os.getcwd(),args.output)
 img_path = os.path.join(output_dir,'crop_img')
-txt_path = os.path.join(output_dir, 'ocr_txt')
-ocr_img_path = os.path.join(output_dir, 'ocr_img')
+txt_path = os.path.join(output_dir,'ocr_txt')
 
 os.makedirs(output_dir)
 os.mkdir(img_path)
@@ -82,7 +81,7 @@ for i in range(len(images)):
     images[i].save('page' + str(i) + '.png', 'png')
 
     if args.slice:
-        slice(out_img, 100) #perhaps dont hard code this 100 is number of slices
+        slice(out_img, 225) #perhaps dont hard code this. 100 is number of slices
 
     shutil.move(out_img, output_dir)
 
@@ -117,34 +116,34 @@ for filename in os.listdir(img_path):
         os.chdir(txt_path)
         with open(filename_no_ext+".txt",'w') as f: f.write(text)
 
-print(".\n.\n.\nOCR done, stitching...")
-# Image stitching 
+print(".\n.\n.\n.\nStiching...")
+
+img_list = os.listdir(img_path)
+os.chdir(img_path)
+test = Image.open(img_list[0])
+images = [Image.open(x) for x in img_list]
+width, height = test.size
+total_width = 15*width
+max_height = 15*height
+new_im = Image.new('RGB', (total_width, max_height))
+
+x_offset = 0
+y_offset = 0
+
+c = 0
+for im in images:
+ 
+    a = img_list[c].split('_')
+    y = int(a[1])
+    b = a[2]
+    d = b.split('.')
+    x = int(d[0])
+    x_offset = im.size[0]*(x-1)
+    y_offset = im.size[1]*(y-1)
+    c += 1
+    new_im.paste(im, (x_offset,y_offset))
 
 os.chdir(output_dir)
-original_img = Image.open(out_img)
-h, w= original_img.size
-final_img = Image.new("RGB", (h, w))
-name, ext = os.path.splitext(out_img)
-final_img.save(name +'_ocr' + ext)
-os.chdir(img_path)
-for img in os.listdir(img_path):
-    tile = Image.open(img).convert('RGB')
-    h2, w2 = tile.size
-    for i in range(0, h, h2):
-        for j in range(0,w,w2):
-            final_img.paste(tile, (i,j))
-
-final_img.save(name+'_ocr'+ ext)
+new_im.save('test.jpg')
 
 print("\n.\n.\n.\nOperation complete")
-
-
-
-
-
-
-
-
-
-
-
