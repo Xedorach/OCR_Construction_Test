@@ -10,6 +10,8 @@ from PIL import Image
 import shutil
 import glob
 import sys
+from math import sqrt
+
 '''
 Image to PDF conversion Arguments
 Different arguments that can be passed to convert_from_path:
@@ -19,7 +21,7 @@ transparent=False, single_file=False, output_file=str(uuid.uuid4()), poppler_pat
 grayscale=False, size=None, paths_only=False, use_pdftocairo=False, timeout=600)
 '''
 
-# Scripts arguments 
+# Parser setup | Script arguments 
 # -f = filename to convert
 # -o = output folder
 # -t = thread count, dont exceed 4. Optional argument, default is 2.
@@ -28,9 +30,7 @@ parser = argparse.ArgumentParser(description='convert pdf to images')
 parser.add_argument('-f','--fileName', help="PDF File name", type=str, required=True)
 parser.add_argument('-o','--output', help="Output directory", type=str, required=True)
 parser.add_argument('-t','--threadCount', help="Output directory",nargs='?', type=int, const = 2)
-parser.add_argument('-s','--slice',help='slice or no', type=bool, nargs='?', const=False) 
-# Removed for now for easier image stitching
-
+parser.add_argument('-s','--slice',help='Number of slices', type=int, nargs='?', const=100) 
 args = parser.parse_args()
 
 # Create directories for clean output
@@ -43,11 +43,11 @@ os.mkdir(img_path)
 os.mkdir(txt_path)
 
 print('Output directories created...')
+
 #Convert pdf file to 1 big image
 images = convert_from_path(args.fileName, dpi=300, thread_count=args.threadCount) 
 
 # Creates images object with each image(converted page) as an entry
-
 # Careful of not having "output folder argument" 
 # https://pypi.org/project/pdf2image/ 
 # "A relatively big PDF will use up all your memory and cause the process to be killed (unless you use an output folder)"
@@ -57,9 +57,7 @@ reader = easyocr.Reader(['en','en'])
 
 
 #Eventually these prints will be done properly with logging..
-
 print(f".\n.\n.\nConverting file {args.fileName} from pdf to image ... please wait") 
-
 
 # Helper function to convert list output from OCR to string to be written to a txt file
 
@@ -81,8 +79,9 @@ for i in range(len(images)):
     images[i].save('page' + str(i) + '.png', 'png')
 
     if args.slice:
-        slice(out_img, 225) #perhaps dont hard code this. 100 is number of slices
+        slice(out_img, args.slice) #perhaps dont hard code this. 100 is number of slices
 
+    #Moves the main high res image out of the folder to save time from applying OCR on it needlessly
     shutil.move(out_img, output_dir)
 
 # lol
@@ -97,8 +96,8 @@ for filename in os.listdir(img_path):
     os.chdir(img_path)
     filename_no_ext=os.path.splitext(filename)[0] #get filename without extension for later use
     image = cv2.imread(filename)
-    result = reader.readtext(image, rotation_info = [0,270])
-    #reads in 0 and 270 degree orientation of text, possible args: 0, 90, 180, 270. needs testing.
+    result = reader.readtext(image, rotation_info = [0,90,180,270])
+    # reads text in 0,90,180,270 degree orientations and picks result with highest confidence
 
     for detection in result:
 
@@ -118,16 +117,17 @@ for filename in os.listdir(img_path):
 
 print(".\n.\n.\n.\nStiching...")
 
-
 # Stitching Area. It is very messy right now but will be cleaned up later. 
 
+# read images from output folder
 img_list = os.listdir(img_path)
-os.chdir(img_path)
-test = Image.open(img_list[0])
-images = [Image.open(x) for x in img_list]
-width, height = test.size
-total_width = 15*width # Get rid of the 15 so it is no hard coded 
-max_height = 15*height
+os.chdir(img_path) #Ensure you are working in the right directory
+sample = Image.open(img_list[0])
+images = [Image.open(x) for x in img_list] #Load images
+width, height = sample.size #obtain image size for offset calculation
+multiplier = sqrt(args.slice) 
+total_width = int(multiplier*width) 
+max_height = int(multiplier*height) 
 new_im = Image.new('RGB', (total_width, max_height))
 
 #Initial values for image loop
