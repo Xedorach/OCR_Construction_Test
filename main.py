@@ -10,7 +10,6 @@ from PIL import Image
 import shutil
 import glob
 import sys
-from math import sqrt
 
 '''
 Image to PDF conversion Arguments
@@ -24,13 +23,15 @@ grayscale=False, size=None, paths_only=False, use_pdftocairo=False, timeout=600)
 # Parser setup | Script arguments 
 # -f = filename to convert
 # -o = output folder
-# -t = thread count, dont exceed 4. Optional argument, default is 2.
+# -t = thread count, dont exceed 4. Optional argument, default is 1.
 # -s = sliced image count, optional argument
 parser = argparse.ArgumentParser(description='convert pdf to images')
 parser.add_argument('-f','--fileName', help="PDF File name", type=str, required=True)
 parser.add_argument('-o','--output', help="Output directory", type=str, required=True)
-parser.add_argument('-t','--threadCount', help="Output directory",nargs='?', type=int, const = 2)
-parser.add_argument('-s','--slice',help='Number of slices', type=int, nargs='?', const=100) 
+parser.add_argument('-t','--threadCount', help="Output directory",nargs='?', type=int, const = 1)
+parser.add_argument('s','--slice', dest='slice', action='store_true')
+parser.add_argument('-ns','--no-slice', dest='slice', action='store_false')
+parser.set_defaults(slice=False) 
 args = parser.parse_args()
 
 # Create directories for clean output
@@ -79,7 +80,7 @@ for i in range(len(images)):
     images[i].save('page' + str(i) + '.png', 'png')
 
     if args.slice:
-        slice(out_img, args.slice) #perhaps dont hard code this. 100 is number of slices
+        slice(out_img, 100)  # 100 is number of slices
 
     #Moves the main high res image out of the folder to save time from applying OCR on it needlessly
     shutil.move(out_img, output_dir)
@@ -96,7 +97,7 @@ for filename in os.listdir(img_path):
     os.chdir(img_path)
     filename_no_ext=os.path.splitext(filename)[0] #get filename without extension for later use
     image = cv2.imread(filename)
-    result = reader.readtext(image, rotation_info = [0,90,180,270])
+    result = reader.readtext(image, detail=1)
     # reads text in 0,90,180,270 degree orientations and picks result with highest confidence
 
     for detection in result:
@@ -124,10 +125,9 @@ img_list = os.listdir(img_path)
 os.chdir(img_path) #Ensure you are working in the right directory
 sample = Image.open(img_list[0])
 images = [Image.open(x) for x in img_list] #Load images
-width, height = sample.size #obtain image size for offset calculation
-multiplier = sqrt(args.slice) 
-total_width = int(multiplier*width) 
-max_height = int(multiplier*height) 
+width, height = sample.size #obtain image size for offset calculation 
+total_width = 10*width
+max_height = 10*height
 new_im = Image.new('RGB', (total_width, max_height))
 
 #Initial values for image loop
